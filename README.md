@@ -1,2 +1,5 @@
-male_twitter
+maletter
 ============
+python2.7
+PyQt
+twython
