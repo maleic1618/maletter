@@ -20,6 +20,10 @@ class MainWindow(QtGui.QMainWindow):
 
         self.initUI()
 
+        init_status = self.api.get_home_timeline(count=20)
+        for status in init_status[::-1]:
+            self.append_status(status)
+
     def initUI(self):
 
         self.twlist=QtGui.QTreeWidget()
@@ -66,12 +70,12 @@ class MainWindow(QtGui.QMainWindow):
                     item2 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' ')])
                     self.twlist.insertTopLevelItem(0, item1)
                     self.tweet_array.insert(0, status)
-                    print status['in_reply_to_status_id']
                     if status['in_reply_to_status_id']!=None:
                         reply_item = self.twlist.topLevelItem(0)
                         in_reply_to_status = self.get_status(status['in_reply_to_status_id'])
-                        item_add = QtGui.QTreeWidgetItem([in_reply_to_status['user']['screen_name'], in_reply_to_status['text']])
-                        reply_item.addChild(item_add)
+                        if in_reply_to_status != None:
+                            item_add = QtGui.QTreeWidgetItem([in_reply_to_status['user']['screen_name'], in_reply_to_status['text']])
+                            reply_item.addChild(item_add)
 
                     if status['in_reply_to_user_id'] == self.myid:
                         self.replylist.insertTopLevelItem(0, item2)
@@ -106,7 +110,9 @@ class MainWindow(QtGui.QMainWindow):
         self.twtext.setText('')
 
     def show_tweet(self, list, status_array):
-        row = list.currentIndex().row()
+        current_index = list.currentIndex()
+        current_item = list.currentItem()
+        row = current_index.row()
         status=status_array[row]
         username = status['user']['screen_name']
         userid = status['user']['name']
@@ -118,6 +124,12 @@ class MainWindow(QtGui.QMainWindow):
             reuserid = status['retweeted_status']['user']['name']
             retexttmp = status['retweeted_status']['text']
             self.selecttext.setText(reusername+':'+reuserid+'\n'+retexttmp+'\n\n(Retweeted by @'+username+')')
+
+        #load replytweet
+        if status['in_reply_to_status_id'] != None and current_item.childCount() == 0:
+            reply_status = api.show_status(id=status['in_reply_to_status_id'])
+            additem = QtGui.QTreeWidgetItem([reply_status['user']['screen_name'], reply_status['text']])
+            current_item.addChild(additem)
 
     def set_reply(self, list, status_array):
         row = list.currentIndex().row()
@@ -140,7 +152,7 @@ class MainWindow(QtGui.QMainWindow):
         for status in self.tweet_array:
             if status['id'] == twid:
                 return status
-        return self.api.show_status(twid)
+        return None
 
 class MyStreamer(TwythonStreamer):
 
