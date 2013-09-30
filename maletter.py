@@ -16,6 +16,7 @@ class MainWindow(QtGui.QMainWindow):
         self.myid = self.api.show_user(screen_name=me['screen_name'])['id']
         self.tweet_array = []
         self.reply_array = []
+        self.loaded_array = []
         self.reply_status = []
 
         self.initUI()
@@ -27,22 +28,25 @@ class MainWindow(QtGui.QMainWindow):
     def initUI(self):
 
         self.twlist=QtGui.QTreeWidget()
-        self.twlist.setColumnCount(2)
-        self.twlist.setHeaderLabels(['UserID','Tweet' ])
+        self.twlist.setColumnCount(3)
+        self.twlist.setHeaderLabels(['UserID', 'Tweet', 'status ID'])
+        self.twlist.setColumnHidden(2, True)
         self.twlist.currentItemChanged.connect(functools.partial(self.show_tweet, list=self.twlist, status_array=self.tweet_array))
         self.twlist.itemClicked.connect(functools.partial(self.show_tweet, list=self.twlist, status_array=self.tweet_array))
         self.twlist.itemDoubleClicked.connect(functools.partial(self.set_reply, list=self.twlist, status_array=self.tweet_array))
 
         self.replylist=QtGui.QTreeWidget()
-        self.replylist.setColumnCount(2)
-        self.replylist.setHeaderLabels(['Reply from', 'Tweet'])
+        self.replylist.setColumnCount(3)
+        self.replylist.setHeaderLabels(['Reply from', 'Tweet', 'status ID'])
+        self.replylist.setColumnHidden(2, True)
         self.replylist.currentItemChanged.connect(functools.partial(self.show_tweet, list=self.replylist, status_array=self.reply_array))
         self.replylist.itemClicked.connect(functools.partial(self.show_tweet, list=self.replylist, status_array=self.reply_array))
         self.replylist.itemDoubleClicked.connect(functools.partial(self.set_reply, list=self.replylist, status_array=self.reply_array))
 
         self.actlist=QtGui.QTreeWidget()
-        self.actlist.setColumnCount(2)
-        self.actlist.setHeaderLabels(['Faved by', 'Your Tweet'])
+        self.actlist.setColumnCount(3)
+        self.actlist.setHeaderLabels(['Faved by', 'Your Tweet', 'status ID'])
+        self.actlist.setColumnHidden(2, True)
 
         self.selecttext=QtGui.QTextEdit(self)
         self.selecttext.setReadOnly(True)
@@ -66,15 +70,15 @@ class MainWindow(QtGui.QMainWindow):
         if status.has_key('event') == False:
             if status.has_key('text') == True:
                 if status.has_key('retweeted_status') == False:
-                    item1 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' ')])
-                    item2 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' ')])
+                    item1 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' '), status['id_str']])
+                    item2 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' '), status['id_str']])
                     self.twlist.insertTopLevelItem(0, item1)
                     self.tweet_array.insert(0, status)
                     if status['in_reply_to_status_id']!=None:
                         reply_item = self.twlist.topLevelItem(0)
                         in_reply_to_status = self.get_status(status['in_reply_to_status_id'])
                         if in_reply_to_status != None:
-                            item_add = QtGui.QTreeWidgetItem([in_reply_to_status['user']['screen_name'], in_reply_to_status['text']])
+                            item_add = QtGui.QTreeWidgetItem([in_reply_to_status['user']['screen_name'], in_reply_to_status['text'], in_reply_to_status['id_str']])
                             reply_item.addChild(item_add)
 
                     if status['in_reply_to_user_id'] == self.myid:
@@ -83,7 +87,7 @@ class MainWindow(QtGui.QMainWindow):
                 else:
                     scname = status['retweeted_status']['user']['screen_name']
                     retext = status['retweeted_status']['text']
-                    item1 = QtGui.QTreeWidgetItem([scname, retext.replace('\n', ' ')+' (Retweeted by @'+status['user']['screen_name']+')'])
+                    item1 = QtGui.QTreeWidgetItem([scname, retext.replace('\n', ' ')+' (Retweeted by @'+status['user']['screen_name']+')', status['id_str']])
                     item1.setTextColor(0, QtGui.QColor(0,128,0))
                     item1.setTextColor(1, QtGui.QColor(0,128,0))
                     self.twlist.insertTopLevelItem(0, item1)
@@ -91,7 +95,7 @@ class MainWindow(QtGui.QMainWindow):
 
         elif status['event'] == 'favorite':
             if status['target']['id'] == self.myid:
-                item1 = QtGui.QTreeWidgetItem([status['source']['screen_name'], status['target_object']['text']])
+                item1 = QtGui.QTreeWidgetItem([status['source']['screen_name'], status['target_object']['text'], status['id_str']])
                 self.actlist.insertTopLevelItem(0, item1)
 
 
@@ -112,11 +116,13 @@ class MainWindow(QtGui.QMainWindow):
     def show_tweet(self, list, status_array):
         current_index = list.currentIndex()
         current_item = list.currentItem()
-        row = current_index.row()
-        status=status_array[row]
+        current_id = current_item.text(2)
+        status = self.get_status(current_id)
+
         username = status['user']['screen_name']
         userid = status['user']['name']
         texttmp = status['text']
+
         if status.has_key("retweeted_status") == False:
             self.selecttext.setText(username+':'+userid+'\n'+texttmp)
         else:
@@ -125,34 +131,45 @@ class MainWindow(QtGui.QMainWindow):
             retexttmp = status['retweeted_status']['text']
             self.selecttext.setText(reusername+':'+reuserid+'\n'+retexttmp+'\n\n(Retweeted by @'+username+')')
 
+
         #load replytweet
         if status['in_reply_to_status_id'] != None and current_item.childCount() == 0:
             reply_status = api.show_status(id=status['in_reply_to_status_id'])
-            additem = QtGui.QTreeWidgetItem([reply_status['user']['screen_name'], reply_status['text']])
+            additem = QtGui.QTreeWidgetItem([reply_status['user']['screen_name'], reply_status['text'], reply_status['id_str']])
             current_item.addChild(additem)
+            self.loaded_array.append(reply_status)
 
     def set_reply(self, list, status_array):
-        row = list.currentIndex().row()
-        self.reply_status = status_array[row]
+        current_id = list.currentItem().text(2)
+        status = get_status(current_id)
         self.twtext.setText('@'+self.reply_status['user']['screen_name']+' '+self.twtext.text())
         self.twtext.setFocus()
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_S and e.modifiers() == QtCore.Qt.ControlModifier:
-            row = self.twlist.currentIndex().row()
-            self.twlist.currentItem().setTextColor(0, QtGui.QColor(255,0,0))
-            self.twlist.currentItem().setTextColor(1, QtGui.QColor(255,0,0))
-            fav = self.api.create_favorite(id=self.tweet_array[row]['id'])
+            current_item = self.twlist.currentItem()
+            current_item.setTextColor(0, QtGui.QColor(255,0,0))
+            current_item.setTextColor(1, QtGui.QColor(255,0,0))
+            fav = self.api.create_favorite(id=int(current_item.text(2)))
 
         if e.key() == QtCore.Qt.Key_R and e.modifiers() == QtCore.Qt.ControlModifier:
-            row = self.twlist.currentIndex().row()
-            rt = self.api.retweet(id=self.tweet_array[row]['id'])
+            current_item = self.twlist.currentItem()
+            rt = self.api.retweet(id=int(current_item.text(2)))
 
     def get_status(self, twid):
         for status in self.tweet_array:
-            if status['id'] == twid:
+            if status['id_str'] == str(twid):
+                return status
+        for status in self.loaded_array:
+            if status['id_str'] == str(twid):
                 return status
         return None
+
+    def get_alllist(self, list): #list.item()? <-Protected Function
+        all_list = []
+        for i in range(list.topLevelItemCount):
+            all_list.insert(0, list.topLevelItem(i))
+        return all_list
 
 class MyStreamer(TwythonStreamer):
 
