@@ -1,5 +1,4 @@
 maletter
 ============
-python2.7
-PyQt
-twython
+Pythonで動くTwitterクライアント(笑)
+PyQt4とTwythonがあれば動きます．
