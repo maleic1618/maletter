@@ -8,7 +8,11 @@ from secretkey import *
 import threading
 import functools
 import re
-import os
+from StringIO import StringIO
+import Tkinter
+from tkFileDialog import *
+from urllib import urlopen
+import io
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, api_cls, parent = None):
@@ -20,6 +24,7 @@ class MainWindow(QtGui.QMainWindow):
         self.reply_array = []
         self.loaded_array = []
         self.reply_status = []
+        self.img = ''
 
         self.initUI()
 
@@ -47,7 +52,7 @@ class MainWindow(QtGui.QMainWindow):
         self.actlist.setColumnCount(3)
         self.actlist.setHeaderLabels(['Faved by', 'Your Tweet', 'status ID'])
         self.actlist.setColumnHidden(2, True)
-        self.actlist.itemClicked.connect(functools.partial(self.show_tweet, list=self.actlist))
+        self.actlist.currentItemChanged.connect(functools.partial(self.show_tweet, list=self.actlist))
 
         self.selecttext=QtGui.QTextBrowser(self)
         self.selecttext.setReadOnly(True)
@@ -55,8 +60,18 @@ class MainWindow(QtGui.QMainWindow):
         self.selecttext.setGeometry(2,402,496,76)
 
         self.twtext=QtGui.QLineEdit(self)
-        self.twtext.setGeometry(0,480,500,20)
+        self.twtext.setGeometry(0,480,400,20)
         self.twtext.returnPressed.connect(self.twupdate)
+
+        self.mediabutton = QtGui.QPushButton(self)
+        self.mediabutton.setGeometry(450,480,50,20)
+        self.mediabutton.setText(u'画像')
+        self.mediabutton.clicked.connect(self.set_media)
+
+        self.mediabutton = QtGui.QPushButton(self)
+        self.mediabutton.setGeometry(400,480,50,20)
+        self.mediabutton.setText(u'TeX')
+        self.mediabutton.clicked.connect(self.set_tex)
 
         self.twtab=QtGui.QTabWidget(self)
         self.twtab.addTab(self.twlist, u"ホーム")
@@ -64,7 +79,8 @@ class MainWindow(QtGui.QMainWindow):
         self.twtab.addTab(self.actlist, u"ふぁぼられ")
         self.twtab.setGeometry(0,0,500,400)
 
-        self.setGeometry(300,300,500,500)
+        self.setFixedSize(500,500)
+        self.move(300,300)
         self.setWindowTitle('maletter')
         self.show()
 
@@ -72,9 +88,13 @@ class MainWindow(QtGui.QMainWindow):
         if status.has_key('event') == False:
             if status.has_key('text') == True:
                 if status.has_key('retweeted_status') == False:
+                    item_add2 = ''
                     item1 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' '), status['id_str']])
                     item2 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' '), status['id_str']])
-                    if status['in_reply_to_status_id'] != None:
+                    if status['in_reply_to_user_id'] == self.myid:
+                        item1.setBackgroundColor(0, QtGui.QColor(255, 100, 25))
+                        item1.setBackgroundColor(1, QtGui.QColor(255, 100, 25))
+                    elif status['in_reply_to_user_id'] != None:
                         item1.setBackgroundColor(0, QtGui.QColor(255, 239, 133))
                         item1.setBackgroundColor(1, QtGui.QColor(255, 239, 133))
                     self.twlist.insertTopLevelItem(0, item1)
@@ -84,12 +104,15 @@ class MainWindow(QtGui.QMainWindow):
                         in_reply_to_status = self.get_status(status['in_reply_to_status_id'])
                         if in_reply_to_status != None:
                             item_add = QtGui.QTreeWidgetItem([in_reply_to_status['user']['screen_name'], in_reply_to_status['text'], in_reply_to_status['id_str']])
+                            item_add2 = item_add
                             if in_reply_to_status['favorited'] == True:
                                 item_add.setTextColor(0, QtGui.QColor(255,0,0))
                                 item_add.setTextColor(1, QtGui.QColor(255,0,0))
                             reply_item.addChild(item_add)
 
                     if status['in_reply_to_user_id'] == self.myid:
+                        if item_add2 != '':
+                            item2.addChile(item_add2)
                         self.replylist.insertTopLevelItem(0, item2)
                         self.reply_array.insert(0,status)
                 else:
@@ -105,16 +128,31 @@ class MainWindow(QtGui.QMainWindow):
             if status['target']['id'] == self.myid:
                 item1 = QtGui.QTreeWidgetItem([status['source']['screen_name'], status['target_object']['text'], status['target_object']['id_str']])
                 self.actlist.insertTopLevelItem(0, item1)
+                self.loaded_array.append(status['target_object'])
 
     def tweet(self, posttext):
-        if self.reply_status != []:
-            if not(posttext.find('@'+self.reply_status['user']['screen_name'])):
-                self.api.update_status(status=posttext, in_reply_to_status_id=self.reply_status['id'])
+        reply_id=''
+
+        if self.img == '':
+            if self.reply_status != []:
+                if not(posttext.find('@'+self.reply_status['user']['screen_name'])):
+                    reply_id=self.reply_status['id']
+                    self.api.update_status(status = posttext, in_reply_to_status_id = reply_id)
+                else:
+                    self.api.update_status(status = posttext)
             else:
-                self.api.update_status(status=posttext)
-            self.reply_status =[]
+                self.api.update_status(status = posttext)
         else:
-            self.api.update_status(status=posttext)
+            if self.reply_status != []:
+                if not(posttext.find('@'+self.reply_status['user']['screen_name'])):
+                    reply_id=self.reply_status['id']
+                    self.api.update_status_with_media(status = posttext, in_reply_to_status_id = reply_id,
+                        media = io.BytesIO(self.img))
+                else:
+                    self.api.update_status_with_media(status = posttext, media = io.BytesIO(self.img))
+            else:
+                self.api.update_status_with_media(status = posttext, media = io.BytesIO(self.img))
+            self.img = ''
 
     def twupdate(self):
         self.tweet(unicode(self.twtext.text()))
@@ -127,19 +165,19 @@ class MainWindow(QtGui.QMainWindow):
 
         username = status['user']['screen_name']
         userid = status['user']['name']
-        texttmp = self.add_link_status(status)
         source = status['source']
 
         if status.has_key("retweeted_status") == False:
-            self.selecttext.setHtml(username+':'+userid+'<br>'+texttmp+'<br><br>(via '+source+')')
+            texttmp = self.add_link_status(status)
+            self.selecttext.setHtml(userid+':'+username+'<br>'+texttmp+'<br><br>(via '+source+')')
         else:
             reusername = status['retweeted_status']['user']['screen_name']
             reuserid = status['retweeted_status']['user']['name']
             retexttmp = self.add_link_status(status['retweeted_status'])
             re_source = status['retweeted_status']['source']
-            self.selecttext.setHtml(reusername+':'+reuserid+'<br>'+retexttmp+'<br><br>(Retweeted by @'+username+', via ' +re_source+')')
+            self.selecttext.setHtml(reuserid+':'+reusername+'<br>'+retexttmp+'<br><br>(Retweeted by @'+username+', via ' +re_source+')')
 
-        #load replytweet
+        #load reply
         if status['in_reply_to_status_id'] != None and current_item.childCount() == 0:
             reply_status = api.show_status(id=status['in_reply_to_status_id'])
             additem = QtGui.QTreeWidgetItem([reply_status['user']['screen_name'], reply_status['text'], reply_status['id_str']])
@@ -149,14 +187,32 @@ class MainWindow(QtGui.QMainWindow):
     def set_reply(self, list):
         current_id = list.currentItem().text(2)
         status = self.get_status(current_id)
+        if status['retweeted'] == True:
+            status = status['retweeted_status']
         self.reply_status = status
         self.twtext.setText('@'+status['user']['screen_name']+' '+self.twtext.text())
         self.twtext.setFocus()
 
+    def set_media(self):
+        root = Tkinter.Tk()
+        root.withdraw()
+        img_path = askopenfilename(filetypes = [(u'画像ファイル', ('.png', '.jpg', '.jpeg', '.gif'))])
+        with open(img_path, 'rb') as f:
+            img = f.read()
+
+    def set_tex(self):
+        tex = raw_input('数式を入力')
+        tex = tex.replace('+', '%2B')
+        base_url = 'http://chart.apis.google.com/chart'
+        url_ext = 'cht=tx&chl=' + tex
+        opener = urlopen(base_url, url_ext.encode('utf-8'))
+        self.img = opener.read()
+
     def keyPressEvent(self, e):
         current_list = self.twtab.currentWidget()
         current_item = current_list.currentItem()
-        current_id = current_item.text(2)
+        if current_item != None:
+            current_id = current_item.text(2)
         if e.key() == QtCore.Qt.Key_S and e.modifiers() == QtCore.Qt.ControlModifier:
             current_item.setTextColor(0, QtGui.QColor(255,0,0))
             current_item.setTextColor(1, QtGui.QColor(255,0,0))
@@ -190,6 +246,8 @@ class MainWindow(QtGui.QMainWindow):
         for status in self.loaded_array:
             if status['id_str'] == str(twid):
                 return status
+        #status = api.show_status(int(twid))
+        #self.loaded_array.append(status)
         return None
 
     def get_alllist(self, list): #list.item()? <-Protected Function
@@ -204,14 +262,17 @@ class MainWindow(QtGui.QMainWindow):
 
     def add_link_status(self, status):
         entities_url = status['entities']['urls']
+        text = status['text']
         if entities_url != []:
-            texttmp = status['text']
             for i in range(len(entities_url)):
-                texttmp = texttmp.replace(entities_url[i]['url'],
+                text = text.replace(entities_url[i]['url'],
                     '<a href="' + entities_url[i]['expanded_url'] + '">' + entities_url[i]['display_url'] + '</a>')
-            return texttmp
-        else:
-            return status['text']
+        if status['entities'].has_key('media') == True:
+            entities_media = status['entities']['media']
+            for i in range(len(entities_media)):
+                text = text.replace(entities_media[i]['url'],
+                    '<a href="' + entities_media[i]['expanded_url'] + '">' + entities_media[i]['display_url'] + '</a>')
+        return text
 
 class MyStreamer(TwythonStreamer):
 
