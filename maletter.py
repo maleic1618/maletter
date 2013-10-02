@@ -92,8 +92,8 @@ class MainWindow(QtGui.QMainWindow):
                     item1 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' '), status['id_str']])
                     item2 = QtGui.QTreeWidgetItem([status['user']['screen_name'], status['text'].replace('\n', ' '), status['id_str']])
                     if status['in_reply_to_user_id'] == self.myid:
-                        item1.setBackgroundColor(0, QtGui.QColor(255, 100, 25))
-                        item1.setBackgroundColor(1, QtGui.QColor(255, 100, 25))
+                        item1.setBackgroundColor(0, QtGui.QColor(255, 130, 100))
+                        item1.setBackgroundColor(1, QtGui.QColor(255, 130, 100))
                     elif status['in_reply_to_user_id'] != None:
                         item1.setBackgroundColor(0, QtGui.QColor(255, 239, 133))
                         item1.setBackgroundColor(1, QtGui.QColor(255, 239, 133))
@@ -112,7 +112,7 @@ class MainWindow(QtGui.QMainWindow):
 
                     if status['in_reply_to_user_id'] == self.myid:
                         if item_add2 != '':
-                            item2.addChile(item_add2)
+                            item2.addChild(item_add2)
                         self.replylist.insertTopLevelItem(0, item2)
                         self.reply_array.insert(0,status)
                 else:
