@@ -83,7 +83,7 @@ class Plugin(object):
         """
         self.mw.update_status(text, in_reply_to_status_id, image)
 
-    def create_faborite(self, status_id):
+    def create_favorite(self, status_id):
         """
         status_idをふぁぼる．
         文字列でもintでも可．

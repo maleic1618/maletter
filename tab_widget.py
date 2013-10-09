@@ -62,7 +62,7 @@ class TweetList(QtGui.QTreeWidget):
         if status.has_key('retweeted_status') == False:
             item = TweetListItem(status['user']['screen_name'], status['text'].replace('\n', ' '), status['id'])
             if status['favorited'] == True:
-                item.change_color(backgroundcolor=(255, 0, 0))
+                item.change_color(textcolor=(255, 0, 0))
             if status['in_reply_to_user_id'] == self.mystatus['id']:
                 item.change_color(backgroundcolor=(255, 170, 130))
             elif status['in_reply_to_user_id'] != None:
