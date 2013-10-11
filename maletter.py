@@ -28,7 +28,6 @@ class MainWindow(QtGui.QMainWindow):
         self.preview = QtGui.QPixmap()
         self.buttoncount = 0
         self.initUI()
-        self.grid.setColumnStretch(1,100)
 
         init_status = self.api.get_home_timeline(count=20)
         for status in init_status[::-1]:
@@ -57,7 +56,7 @@ class MainWindow(QtGui.QMainWindow):
 
         detailtext_widget = QtGui.QWidget()
         detailtext_widget.setLayout(detailtext_layout)
-        detailtext_widget.setContentsMargins(0,0,0,0)
+        detailtext_widget.setFixedHeight(80)
 
         self.twtab=QtGui.QTabWidget(self)
         self.twtab.currentChanged.connect(self.current_tab_changed)
@@ -174,7 +173,7 @@ class MainWindow(QtGui.QMainWindow):
             #Error Message
             pass
         self.delete_image_data()
-        reply_status = None
+        self.delete_reply_status()
 
     def get_status(self, twid):
         for status in self.status_array:
@@ -213,6 +212,7 @@ class TweetTextBox(QtGui.QTextEdit):
             self.mw.update_status(posttext = posttext, image = image)
         self.setText('')
         self.mw.delete_reply_status()
+        self.mw.delete_image_data()
 
 class DetailTextBox(QtGui.QTextBrowser):
     def __init__(self):
