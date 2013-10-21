@@ -14,7 +14,6 @@ from tkFileDialog import *
 import io
 from tab_widget import TweetList, TweetListItem
 from plugin_manager import *
-import cPickle
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, api_cls, parent = None):
@@ -29,9 +28,17 @@ class MainWindow(QtGui.QMainWindow):
         self.buttoncount = 0
         self.initUI()
 
+        self.streamer = MyStreamer(self, CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET)
+        self.streamer_thread = StreamerThread(self.streamer)
+        self.streamer_thread.start()
+
         init_status = self.api.get_home_timeline(count=20)
         for status in init_status[::-1]:
             self.status_received(status)
+
+    def closeEvent(self, event):
+        self.streamer.disconnect()
+        return QtGui.QMainWindow.closeEvent(self, event)
 
     def initUI(self):
         self.detailtext=DetailTextBox()
@@ -254,13 +261,17 @@ class MyStreamer(TwythonStreamer):
     def on_success(self, status):
         self.mw.status_received(status)
 
+class StreamerThread(QtCore.QThread):
+    def __init__(self, streamer):
+        super(StreamerThread, self).__init__()
+        self.streamer = streamer
+
+    def run(self):
+        self.streamer.user()
+
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     api = Twython(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET)
     mw = MainWindow(api_cls=api)
 
-    stream = MyStreamer(mw, CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET)
-    twit = threading.Thread(target=stream.user)
-    twit.start()
     app.exec_()
-    stream.disconnect() #終了したらユーザーストリームを切ること
