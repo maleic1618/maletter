@@ -36,7 +36,7 @@ class Button(QtGui.QPushButton):
         self.plugin.show_text(text)
 
     def show_html(self, htmltext):
-        self.plugin.show_html(text)
+        self.plugin.show_html(htmltext)
 
     def set_textbox_text(self, text):
         self.plugin.set_textbox_text(text)

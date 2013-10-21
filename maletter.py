@@ -1,16 +1,10 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
 
-import sys
 from PyQt4 import QtGui, QtCore
 from twython import Twython, TwythonStreamer, TwythonError
 from secretkey import *
-import threading
-import functools
-import re
 from StringIO import StringIO
-import Tkinter
-from tkFileDialog import *
 import io
 from tab_widget import TweetList, TweetListItem
 from plugin_manager import *
@@ -176,8 +170,8 @@ class MainWindow(QtGui.QMainWindow):
                 else:
                     self.api.update_status_with_media(status = posttext, in_reply_to_status_id = in_reply_to_status_id, media = io.BytesIO(image))
         except TwythonError as err:
-            #Error Message
-            pass
+            print err
+
         self.delete_image_data()
         self.delete_reply_status()
 
