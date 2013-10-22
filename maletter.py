@@ -5,15 +5,10 @@ import sys
 from PyQt4 import QtGui, QtCore
 from twython import Twython, TwythonStreamer, TwythonError
 from secretkey import *
-import threading
-import functools
-import re
 from StringIO import StringIO
-import Tkinter
-from tkFileDialog import *
 import io
-from tab_widget import TweetList, TweetListItem
 from plugin_manager import *
+from tab_widget import TweetListMenu
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, api_cls, parent = None):
@@ -26,6 +21,7 @@ class MainWindow(QtGui.QMainWindow):
         self.img = None
         self.preview = QtGui.QPixmap()
         self.buttoncount = 0
+        self.init_menu()
         self.initUI()
 
         self.streamer = MyStreamer(self, CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET)
@@ -39,6 +35,15 @@ class MainWindow(QtGui.QMainWindow):
     def closeEvent(self, event):
         self.streamer.disconnect()
         return QtGui.QMainWindow.closeEvent(self, event)
+
+    def init_menu(self):
+        """
+        Widgetのコンテキストメニューのインスタンスを生成しておく．
+        後にWidget部分をフォルダにまとめたときはplugin_managerみたいなので
+        まとめて管理するが，今は少ないのでここにまとめておく
+        """
+        self.menu = {}
+        self.menu['TweetListMenu'] = TweetListMenu(self)
 
     def initUI(self):
         self.detailtext=DetailTextBox()
