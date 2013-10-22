@@ -23,7 +23,11 @@ class TweetList(QtGui.QTreeWidget):
         self.currentItemChanged.connect(self.item_changed)
         self.itemDoubleClicked.connect(self.item_double_clicked)
         self.itemExpanded.connect(self.item_expanded)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.on_context_menu)
+
         self.mystatus = self.mw.mystatus
+        self.menu = QtGui.QMenu(self)
 
     def item_changed(self, current_item, previous_item):
         if current_item.status_id == None:
@@ -52,6 +56,9 @@ class TweetList(QtGui.QTreeWidget):
         リストのヘッダーを変更．
         """
         self.setHeaderLabels([id_name, textname])
+
+    def on_context_menu(self, point):
+        self.mw.menu['TweetListMenu'].execute(point, self)
 
     def append_status(self, status):
         """
@@ -138,6 +145,7 @@ class TweetList(QtGui.QTreeWidget):
             username = status['user']['screen_name']
             self.set_textbox_text('https://twitter.com/'+username+'/status/'+status['id_str']+' ' + self.get_textbox_text())
             self.set_textbox_focus()
+        return QtGui.QTreeWidget.keyPressEvent(self, e)
 
     def load_replied_tweet(self, item):
         #ロード用．正直デフォの使い方以外に使い道はない気もする
@@ -146,7 +154,7 @@ class TweetList(QtGui.QTreeWidget):
             return
         replied_status = self.get_status_from_id(child.status_id)
         child.set_display_id(replied_status['user']['screen_name'])
-        child.set_display_text(replied_status['text'])
+        child.set_display_text(replied_status['text'].replace('\n', ' '))
         if replied_status['in_reply_to_status_id'] != None:
             item_add = TweetListItem('', '', replied_status['in_reply_to_status_id'])
             child.addChild(item_add)
@@ -201,10 +209,34 @@ class TweetListItem(QtGui.QTreeWidgetItem):
         self.setText(1, text)
 
     def change_color(self, textcolor=None, backgroundcolor=None):
-        #textcolorはタプルで渡すこと
+        #textcolor, backgroundcolorはRGB値をタプルで渡すこと
         if textcolor != None:
             self.setTextColor(0, QtGui.QColor(*textcolor))
             self.setTextColor(1, QtGui.QColor(*textcolor))
         if backgroundcolor != None:
             self.setBackgroundColor(0, QtGui.QColor(*backgroundcolor))
             self.setBackgroundColor(1, QtGui.QColor(*backgroundcolor))
+
+class TweetListMenu(QtGui.QMenu):
+    def __init__(self, mw):
+        super(TweetListMenu, self).__init__(mw)
+        self.addAction(u'ふぁぼる(&F)', self.favorite_current)
+        self.addAction(u'リツイート(&R)', self.retweet_current)
+        self.current_list = None
+        self.mw = mw
+
+    def execute(self, point, tweetlist):
+        self.current_list = tweetlist
+        self.exec_(tweetlist.mapToGlobal(point))
+
+    def favorite_current(self):
+        current_item = self.current_list.currentItem()
+        self.current_list.create_favorite(current_item.status_id)
+        current_item.change_color(textcolor=(255,0,0))
+
+    def retweet_current(self):
+        current_item = self.current_list.currentItem()
+        self.current_list.create_retweet(current_item.status_id)
+
+    def add_action(self, text, receiver):
+        self.addAction(text, receiver)
