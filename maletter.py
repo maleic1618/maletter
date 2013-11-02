@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
 
-import sys
 from PyQt4 import QtGui, QtCore
 from twython import Twython, TwythonStreamer, TwythonError
 from secretkey import *
@@ -25,7 +24,7 @@ class MainWindow(QtGui.QMainWindow):
         self.initUI()
 
         self.streamer = MyStreamer(self, CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET)
-        self.streamer_thread = StreamerThread(self.streamer)
+        self.streamer_thread = StreamerThread(streamer=self.streamer, on_finished=self.streamer.disconnect)
         self.streamer_thread.start()
 
         init_status = self.api.get_home_timeline(count=20)
@@ -33,7 +32,6 @@ class MainWindow(QtGui.QMainWindow):
             self.status_received(status)
 
     def closeEvent(self, event):
-        self.streamer.disconnect()
         return QtGui.QMainWindow.closeEvent(self, event)
 
     def init_menu(self):
@@ -182,8 +180,8 @@ class MainWindow(QtGui.QMainWindow):
                 else:
                     self.api.update_status_with_media(status = posttext, in_reply_to_status_id = in_reply_to_status_id, media = io.BytesIO(image))
         except TwythonError as err:
-            #Error Message
-            pass
+            print err
+
         self.delete_image_data()
         self.delete_reply_status()
 
@@ -258,7 +256,6 @@ class ReplyTextBox(QtGui.QLineEdit):
         self.setHidden(True)
 
 class MyStreamer(TwythonStreamer):
-
     def __init__(self, cls, *args):
         super(MyStreamer, self).__init__(*args)
         self.mw = cls
@@ -267,12 +264,17 @@ class MyStreamer(TwythonStreamer):
         self.mw.status_received(status)
 
 class StreamerThread(QtCore.QThread):
-    def __init__(self, streamer):
+    def __init__(self, streamer, on_finished=None):
         super(StreamerThread, self).__init__()
         self.streamer = streamer
+        self.on_terminal = on_finished
 
     def run(self):
         self.streamer.user()
+    
+    def terminate(self):
+        if self.on_finished is not None:
+            self.on_finished()
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)

@@ -85,18 +85,18 @@ class TweetList(QtGui.QTreeWidget):
 
         self.insertTopLevelItem(0, item)
 
-    def append_item(self, id, text, status_id, textcolor=None, backgroundcolor=None, multi_line=False):
+    def append_item(self, name, content, status_id, textcolor=None, backgroundcolor=None, multi_line=False):
         """
-        id, textのリストを追加．
+        name, contentのリストを追加．
         status_idは(デフォでは)そのアイテムをクリックされたときに
         詳細ツイート欄に表示するstatusのid．
         (TweetListItemのstatus_idになる)
         Noneにしておくとクリックしてもｽﾙｰされる．
         """
         if multi_line == False:
-            id = id.replace('\n', ' ')
-            text = text.replace('\n', ' ')
-        item = TweetListItem(id, text, status_id)
+            name = name.replace('\n', ' ')
+            content = content.replace('\n', ' ')
+        item = TweetListItem(name, content, status_id)
         item.change_color(textcolor, backgroundcolor)
         self.insertTopLevelItem(0, item)
 
@@ -109,18 +109,18 @@ class TweetList(QtGui.QTreeWidget):
 
         if e.key() == QtCore.Qt.Key_S and e.modifiers() == QtCore.Qt.ControlModifier:
             try:
-                fav = self.create_favorite(current_id)
+                self.create_favorite(current_id)
                 current_item.change_color(textcolor=(255,0,0))
             except TwythonError as err:
                 #エラーメッセージ
-                pass
+                print err
 
         if e.key() == QtCore.Qt.Key_R and e.modifiers() == QtCore.Qt.ControlModifier:
             try:
-                rt = self.create_retweet(current_id)
+                self.create_retweet(current_id)
             except TwythonError as err:
                 #エラーメッセージ
-                pass
+                print err
 
         if e.key() == QtCore.Qt.Key_Return:
             status = self.get_status_from_id(current_id)
@@ -134,7 +134,7 @@ class TweetList(QtGui.QTreeWidget):
                 username = u'鍵'
             else:
                 username = status['user']['screen_name']
-            self.set_reply_status = status
+            self.set_reply_status(status)
             self.set_textbox_text(self.get_textbox_text() + 'RT @' + username + ' ' + status['text'])
             self.set_textbox_focus()
 
@@ -171,7 +171,7 @@ class TweetList(QtGui.QTreeWidget):
         self.plugin.show_text(text)
 
     def show_html(self, htmltext):
-        self.plugin.show_html(text)
+        self.plugin.show_html(htmltext)
 
     def set_textbox_text(self, text):
         self.plugin.set_textbox_text(text)
@@ -202,8 +202,8 @@ class TweetListItem(QtGui.QTreeWidgetItem):
         super(TweetListItem, self).__init__([display_id, display_text])
         self.status_id = status_id
 
-    def set_display_id(self, id):
-        self.setText(0, id)
+    def set_display_id(self, status_id):
+        self.setText(0, status_id)
 
     def set_display_text(self, text):
         self.setText(1, text)

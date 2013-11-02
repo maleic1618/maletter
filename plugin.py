@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
 
-from PyQt4 import QtGui,QtCore
-from twython import TwythonError
-
 class Plugin(object):
     """
     maletterのplugin用class
