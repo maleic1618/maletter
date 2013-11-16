@@ -51,6 +51,7 @@ class DefaultLayout(Plugin):
         self.twtext_widget.setFixedHeight(80)
 
         self.twtext_layout = QtGui.QHBoxLayout()
+        self.twtext_layout.setMargin(0)
         self.twtext_widget.setLayout(self.twtext_layout)
         
         # ボタン表示部分
