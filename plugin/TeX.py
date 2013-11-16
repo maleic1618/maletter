@@ -5,10 +5,10 @@ import sys
 import os
 sys.path.append(os.pardir)
 
-from button_widget import *
-from plugin import *
 from StringIO import StringIO
 from urllib import urlopen
+from widget.button import Button
+from default import *
 
 class TeXButton(Button):
     def __init__(self, mainwindow, plugin, name):
@@ -23,8 +23,10 @@ class TeXButton(Button):
         img = opener.read()
         self.plugin.set_image_data(img)
 
-class TeX(Plugin):
+class TeX(LayoutPlugin):
     def __init__(self, mainwindow):
         super(TeX, self).__init__(mainwindow)
-        self.button = TeXButton(mainwindow, self, u'TeX')
+    
+    def initUI(self):
+        self.button = TeXButton(self.mw, self, u'TeX')
         self.add_button(self.button)

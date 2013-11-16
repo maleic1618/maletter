@@ -1,3 +1,6 @@
 *.pyc
 *.psproj
 secretkey.py
+.project
+.pydevproject
+.settings/

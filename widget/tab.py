@@ -30,7 +30,7 @@ class TweetList(QtGui.QTreeWidget):
         self.menu = QtGui.QMenu(self)
 
     def item_changed(self, current_item, previous_item):
-        if current_item.status_id == None:
+        if current_item.status_id is None:
             return
         status = self.get_status_from_id(current_item.status_id)
         self.show_status(status)
@@ -72,14 +72,14 @@ class TweetList(QtGui.QTreeWidget):
                 item.change_color(textcolor=(255, 0, 0))
             if status['in_reply_to_user_id'] == self.mystatus['id']:
                 item.change_color(backgroundcolor=(255, 170, 130))
-            elif status['in_reply_to_user_id'] != None:
+            elif status['in_reply_to_user_id'] is not None:
                 item.change_color(backgroundcolor=(255, 239, 133))
         else:
             retweeted_status = status['retweeted_status']
             item = TweetListItem(retweeted_status['user']['screen_name'], retweeted_status['text'].replace('\n', ' '), status['id'])
             item.change_color(textcolor=(0, 128, 0))
 
-        if status['in_reply_to_status_id'] != None:
+        if status['in_reply_to_status_id'] is not None:
             item_add = TweetListItem('', '', status['in_reply_to_status_id'])
             item.addChild(item_add)
 
@@ -209,11 +209,11 @@ class TweetListItem(QtGui.QTreeWidgetItem):
         self.setText(1, text)
 
     def change_color(self, textcolor=None, backgroundcolor=None):
-        #textcolor, backgroundcolorはRGB値をタプルで渡すこと
-        if textcolor != None:
+        #textcolorはタプルで渡すこと
+        if textcolor is not None:
             self.setTextColor(0, QtGui.QColor(*textcolor))
             self.setTextColor(1, QtGui.QColor(*textcolor))
-        if backgroundcolor != None:
+        if backgroundcolor is not None:
             self.setBackgroundColor(0, QtGui.QColor(*backgroundcolor))
             self.setBackgroundColor(1, QtGui.QColor(*backgroundcolor))
 

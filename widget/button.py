@@ -61,3 +61,14 @@ class Button(QtGui.QPushButton):
 
     def show_status(self, status):
         self.plugin.show_status(status)
+
+class ImageButton(Button):
+    def __init__(self, mainwindow, plugin, name):
+        super(ImageButton, self).__init__(mainwindow, plugin, name)
+
+    def button_clicked(self):
+        img_path = QtGui.QFileDialog.getOpenFileName(self, 'Select Image', filter =  "Image Files (*.png *.jpg *.bmp)")
+        with open(img_path, 'rb') as f:
+            img = f.read()
+        self.plugin.set_image_data(img)
+

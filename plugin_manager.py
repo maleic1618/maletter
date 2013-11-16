@@ -4,9 +4,10 @@
 import os
 import sys
 import inspect
+from plugin.__init__ import DEFAULT_FILES
+import importlib
 
 class PluginManager(object):
-
     def __init__(self, target_dir, required_funcs):
         """
         target_dir:pluginフォルダの指定．相対パスでもよい．
@@ -22,6 +23,7 @@ class PluginManager(object):
         #ロードされたプラグインの辞書．
         # ['modole_name' : ['func_name' : func_object, 'func2' : func2_object, ...], ...]
         self.plugin_dict = {}
+        self.plugin_order = []
 
         self.plugin_dir_path = None
 
@@ -43,23 +45,16 @@ class PluginManager(object):
         if self.plugin_dir_path not in sys.path:
             sys.path.append(self.plugin_dir_path)
 
-
     def load_plugins(self):
         """
         plugin_dir_path内をモジュールをロードし，import_pluginに引き渡す．
         """
 
-        self.plugin_dict = {}
-        for item in os.listdir(self.plugin_dir_path):
-            #os.path.isfileの挙動がよく分からないのでコメントアウト
-            #target_dirの中にモジュール以外のファイルを入れないようにすること．
-            #
-            #if os.path.isfile(item) != True:
-            #    continue
-
-            mod_name = inspect.getmodulename(item)
-            self.import_plugin(mod_name)
-
+        # default_filesは先に読み込む
+        for module in set([inspect.getmodulename(item)
+            for item in self.sort_plugin_list(os.listdir(self.plugin_dir_path))]):
+                self.import_plugin(module)
+    
     def import_plugin(self, mod_name):
         """
         mod_name:モジュール名
@@ -68,15 +63,11 @@ class PluginManager(object):
         self.plugin_dictに追加される．
         """
 
-        if mod_name == None or len(mod_name) == 0:
+        if mod_name is None or len(mod_name) == 0:
             return None
 
         #mod_nameをインポートする
-        try:
-            mod = __import__(mod_name)
-        except:
-            print 'error on importing "{module}"'.format(module = mod_name)
-            return None
+        mod = importlib.import_module(mod_name)
 
         #modの中からclassだけを取り出す
         class_list = inspect.getmembers(mod, inspect.isclass)
@@ -101,11 +92,25 @@ class PluginManager(object):
                 return
 
         self.plugin_dict[class_name] = class_obj
+        self.plugin_order.append(class_name)
+    
+    def sort_plugin_list(self, mod_list):
+        default_files = []
+        for f in DEFAULT_FILES:
+            if f in mod_list: default_files.append(f)
+        mod_list = list(set(mod_list) - set(default_files))
+        return default_files + mod_list
 
     def get_plugin_count(self):
         return len(self.plugin_dict)
 
     def get_plugin_names(self):
-        if len(self.plugin_dict) == 0:
+        if len(self.plugin_order) == 0:
             return {}
-        return self.plugin_dict.keys()
+        return self.plugin_order
+
+    def delete_plugin(self, mw, name):
+        if self.plugin_dict.has_key(name):
+            del self.plugin_dict[name]
+            del self.plugin_order[self.plugin_order.index(name)]
+            del mw.plugin[name]
